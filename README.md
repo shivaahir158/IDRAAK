@@ -82,8 +82,8 @@ Full experiment matrix on 890 perturbations across 300 technical requirements us
 
 ```bash
 # Clone the repository
-git clone https://github.com/idraak-research/idraak.git
-cd idraak
+git clone https://github.com/shivaahir158/IDRAAK.git
+cd IDRAAK
 
 # Install in development mode
 pip install -e ".[dev]"
@@ -270,12 +270,3 @@ python3 -m pytest tests/ -v --cov=src/idraak
 - W&B/MLflow integration
 - Hybrid extraction merge logic tuning
 
-## Citation
-
-```bibtex
-@software{idraak2025,
-  title={IDRAAK: An Interpretable Multi-Agent Framework for Detecting Semantic Drift and Faithfulness in Multilingual Technical Requirements},
-  year={2025},
-  url={https://github.com/idraak-research/idraak}
-}
-```

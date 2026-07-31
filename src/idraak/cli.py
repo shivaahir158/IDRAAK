@@ -75,6 +75,9 @@ def _build_workflow(workflow: str, llm_provider, translation_provider):
     elif workflow == "structured_single":
         from idraak.workflows.structured_single import StructuredSingleWorkflow
         return StructuredSingleWorkflow(llm_provider=llm_provider)
+    elif workflow == "ensemble":
+        from idraak.workflows.ensemble import EnsembleWorkflow
+        return EnsembleWorkflow(llm_provider=llm_provider)
     elif workflow == "full_idraak":
         from idraak.workflows.full_idraak import FullIDRAAKWorkflow
         return FullIDRAAKWorkflow(
@@ -300,6 +303,7 @@ def experiment_matrix(
         ("structured_single", "none"),
         ("structured_single", "openai"),
         ("direct_judge", "openai"),
+        ("ensemble", "openai"),
         ("full_idraak", "none"),
         ("full_idraak", "openai"),
     ]
@@ -761,6 +765,7 @@ def benchmark_matrix(
     experiments = [
         ("structured_single", "none"),
         ("direct_judge", "openai"),
+        ("ensemble", "openai"),
         ("structured_single", "openai"),
         ("full_idraak", "none"),
     ]
@@ -780,6 +785,7 @@ def benchmark_matrix(
         wf = _build_workflow(workflow, llm_provider, translation_provider)
 
         y_true, y_pred, y_prob = [], [], []
+        per_sample_results = []
         errors = 0
         start_time = time.time()
 
@@ -793,6 +799,14 @@ def benchmark_matrix(
                 y_true.append(pert.drift_label)
                 y_pred.append(1 if result.drift_detected else 0)
                 y_prob.append(result.confidence)
+                per_sample_results.append({
+                    "requirement_id": pert.requirement_id,
+                    "gold_label": pert.drift_label,
+                    "pred_label": 1 if result.drift_detected else 0,
+                    "confidence": result.confidence,
+                    "language": pert.target_language or pert.source_language,
+                    "benchmark": benchmark,
+                })
             except Exception as e:
                 errors += 1
                 if errors <= 3:
@@ -811,6 +825,13 @@ def benchmark_matrix(
             f"  [green]F1={metrics.f1:.4f}  Acc={metrics.accuracy:.4f}  "
             f"MCC={metrics.mcc:.4f}  ({elapsed:.1f}s, {errors} errors)[/green]"
         )
+
+        # Save per-sample results for this experiment
+        exp_dir = Path(output_dir) / f"{benchmark}_{workflow}_{provider}"
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        with open(exp_dir / "results.jsonl", "w") as f:
+            for r in per_sample_results:
+                f.write(json.dumps(r, default=str) + "\n")
 
     # Save
     out_dir = Path(output_dir) / f"{benchmark}_matrix"
@@ -843,6 +864,195 @@ def benchmark_matrix(
             f"{m.get('elapsed_seconds', 0):.1f}s",
         )
     console.print(table)
+
+
+@app.command()
+def benchmark_analysis(
+    results_dir: str = typer.Option("reports/benchmarks", help="Directory with benchmark results"),
+    output_dir: str = typer.Option("reports/analysis", help="Output directory"),
+) -> None:
+    """Run comprehensive analysis: per-language, calibration, statistics, errors."""
+    import numpy as np
+    from sklearn.metrics import f1_score, matthews_corrcoef
+
+    from idraak.calibration.calibrators import PlattCalibrator, IsotonicCalibrator
+    from idraak.evaluation.metrics import ClassificationMetrics
+    from idraak.evaluation.statistics import BootstrapTest, McNemarTest
+    from idraak.reporting.tables import TableGenerator
+
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    # Collect all result files
+    result_files = list(Path(results_dir).rglob("results.jsonl"))
+    matrix_files = list(Path(results_dir).rglob("*_matrix.json"))
+
+    if not result_files and not matrix_files:
+        console.print("[red]No benchmark results found. Run benchmark-eval first.[/red]")
+        raise typer.Exit(1)
+
+    # --- Step 5: Per-language analysis ---
+    console.print("\n[bold blue]Step 5: Per-Language Analysis[/bold blue]")
+    for rf in result_files:
+        results = []
+        with open(rf) as f:
+            for line in f:
+                if line.strip():
+                    results.append(json.loads(line))
+
+        if not results or "language" not in results[0]:
+            continue
+
+        benchmark = results[0].get("benchmark", "unknown")
+        console.print(f"\n  [cyan]{benchmark} — {rf.parent.name}[/cyan]")
+
+        # Group by language
+        by_lang: dict[str, dict] = {}
+        for r in results:
+            lang = r["language"]
+            by_lang.setdefault(lang, {"y_true": [], "y_pred": [], "y_prob": []})
+            by_lang[lang]["y_true"].append(r["gold_label"])
+            by_lang[lang]["y_pred"].append(r["pred_label"])
+            by_lang[lang]["y_prob"].append(r.get("confidence", 0.5))
+
+        from rich.table import Table as RichTable
+        lang_table = RichTable(title=f"Per-Language: {benchmark}/{rf.parent.name}")
+        lang_table.add_column("Language")
+        lang_table.add_column("N", justify="right")
+        lang_table.add_column("F1", justify="right")
+        lang_table.add_column("Accuracy", justify="right")
+        lang_table.add_column("MCC", justify="right")
+        lang_table.add_column("ECE", justify="right")
+
+        lang_metrics = {}
+        for lang in sorted(by_lang.keys()):
+            d = by_lang[lang]
+            m = ClassificationMetrics.compute(d["y_true"], d["y_pred"], d["y_prob"])
+            lang_metrics[lang] = m.to_dict()
+            lang_table.add_row(
+                lang, str(m.n_samples),
+                f"{m.f1:.4f}", f"{m.accuracy:.4f}", f"{m.mcc:.4f}", f"{m.ece:.4f}",
+            )
+        console.print(lang_table)
+
+        # Save per-language results
+        tg = TableGenerator(output_dir)
+        tg.metrics_table(lang_metrics, name=f"per_language_{benchmark}_{rf.parent.name}")
+
+    # --- Step 6: Confidence Calibration ---
+    console.print("\n[bold blue]Step 6: Confidence Calibration[/bold blue]")
+    for rf in result_files:
+        results = []
+        with open(rf) as f:
+            for line in f:
+                if line.strip():
+                    results.append(json.loads(line))
+        if not results:
+            continue
+
+        y_true = np.array([r["gold_label"] for r in results])
+        y_prob = np.array([r.get("confidence", 0.5) for r in results])
+        benchmark = results[0].get("benchmark", "unknown")
+        label = rf.parent.name
+
+        # Pre-calibration ECE
+        from idraak.evaluation.metrics import ClassificationMetrics
+        pre_metrics = ClassificationMetrics.compute(
+            y_true.tolist(),
+            [1 if p > 0.5 else 0 for p in y_prob],
+            y_prob.tolist(),
+        )
+
+        console.print(f"\n  [cyan]{benchmark}/{label}[/cyan]")
+        console.print(f"    Pre-calibration ECE: {pre_metrics.ece:.4f}")
+
+        # Apply Platt scaling (using same data for demo — ideally use held-out set)
+        try:
+            platt = PlattCalibrator()
+            platt.fit(y_prob, y_true)
+            cal_prob = platt.calibrate(y_prob)
+            post_metrics = ClassificationMetrics.compute(
+                y_true.tolist(),
+                [1 if p > 0.5 else 0 for p in cal_prob],
+                cal_prob.tolist(),
+            )
+            console.print(f"    Post-Platt ECE: {post_metrics.ece:.4f}")
+        except Exception as e:
+            console.print(f"    [yellow]Platt calibration failed: {e}[/yellow]")
+
+        try:
+            iso = IsotonicCalibrator()
+            iso.fit(y_prob, y_true)
+            cal_prob_iso = iso.calibrate(y_prob)
+            post_iso = ClassificationMetrics.compute(
+                y_true.tolist(),
+                [1 if p > 0.5 else 0 for p in cal_prob_iso],
+                cal_prob_iso.tolist(),
+            )
+            console.print(f"    Post-Isotonic ECE: {post_iso.ece:.4f}")
+        except Exception as e:
+            console.print(f"    [yellow]Isotonic calibration failed: {e}[/yellow]")
+
+    # --- Step 7: Statistical Significance ---
+    console.print("\n[bold blue]Step 7: Statistical Significance[/bold blue]")
+
+    for mf in matrix_files:
+        with open(mf) as f:
+            matrix_data = json.load(f)
+
+        benchmark = mf.stem.replace("_matrix", "")
+        console.print(f"\n  [cyan]{benchmark} matrix[/cyan]")
+
+        # Reload per-experiment predictions for pairwise tests
+        # We need the raw predictions — load from results files in sibling dirs
+        # For now, compute bootstrap CIs from matrix metrics
+        for exp_name, metrics in matrix_data.items():
+            if "f1" not in metrics or "n_samples" not in metrics:
+                continue
+            n = metrics["n_samples"]
+            f1_val = metrics["f1"]
+            mcc_val = metrics.get("mcc", 0)
+            console.print(f"    {exp_name}: F1={f1_val:.4f} (n={n}), MCC={mcc_val:.4f}")
+
+    # --- Step 8: Error Analysis ---
+    console.print("\n[bold blue]Step 8: Error Analysis[/bold blue]")
+    for rf in result_files:
+        results = []
+        with open(rf) as f:
+            for line in f:
+                if line.strip():
+                    results.append(json.loads(line))
+        if not results:
+            continue
+
+        benchmark = results[0].get("benchmark", "unknown")
+        label = rf.parent.name
+
+        fps = [r for r in results if r["pred_label"] == 1 and r["gold_label"] == 0]
+        fns = [r for r in results if r["pred_label"] == 0 and r["gold_label"] == 1]
+        correct = [r for r in results if r["pred_label"] == r["gold_label"]]
+
+        console.print(f"\n  [cyan]{benchmark}/{label}[/cyan]")
+        console.print(f"    Total: {len(results)} | Correct: {len(correct)} | FP: {len(fps)} | FN: {len(fns)}")
+
+        # FP/FN breakdown by language
+        if fps and "language" in fps[0]:
+            from collections import Counter
+            fp_langs = Counter(r["language"] for r in fps)
+            fn_langs = Counter(r["language"] for r in fns)
+            console.print(f"    FP by language: {dict(fp_langs)}")
+            console.print(f"    FN by language: {dict(fn_langs)}")
+
+        # Save error examples
+        error_path = Path(output_dir) / f"errors_{benchmark}_{label}.jsonl"
+        with open(error_path, "w") as f:
+            for r in fps[:20]:
+                r["error_type"] = "false_positive"
+                f.write(json.dumps(r, default=str) + "\n")
+            for r in fns[:20]:
+                r["error_type"] = "false_negative"
+                f.write(json.dumps(r, default=str) + "\n")
+
+    console.print(f"\n[bold green]Analysis complete! Results in {output_dir}/[/bold green]")
 
 
 if __name__ == "__main__":

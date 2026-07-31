@@ -138,35 +138,42 @@ class HybridExtractor:
         )
 
     def _merge(self, det: SemanticRequirement, llm: SemanticRequirement) -> SemanticRequirement:
-        """Merge deterministic and LLM extractions.
+        """Merge deterministic and LLM extractions conservatively.
 
-        Deterministic extraction wins for: modality, polarity, numerical_constraints,
-        temporal_constraints, units, exceptions.
-        LLM wins for: actor, action, object, entities, relations.
+        Strategy: Deterministic ALWAYS wins for comparison-critical fields
+        (modality, polarity, numerical, temporal, units, conditions, exceptions,
+        ordering, qualifiers). These are what the drift comparator checks.
+
+        LLM only fills in fields that deterministic cannot extract well
+        (actor, action, object, entities, relations, interface_entities)
+        and only when deterministic found nothing.
         """
         return SemanticRequirement(
-            requirement_id=det.requirement_id or llm.requirement_id,
+            requirement_id=det.requirement_id,
             domain=det.domain or llm.domain,
-            actor=llm.actor or det.actor,
-            action=llm.action or det.action,
-            object=llm.object or det.object,
-            modality=det.modality or llm.modality,
-            polarity=det.polarity or llm.polarity,
-            conditions=det.conditions or llm.conditions,
-            temporal_constraints=det.temporal_constraints or llm.temporal_constraints,
-            numerical_constraints=det.numerical_constraints or llm.numerical_constraints,
-            ordering_constraints=det.ordering_constraints or llm.ordering_constraints,
-            exceptions=det.exceptions or llm.exceptions,
-            entities=llm.entities or det.entities,
-            relations=llm.relations or det.relations,
-            safety_constraints=det.safety_constraints or llm.safety_constraints,
-            security_constraints=det.security_constraints or llm.security_constraints,
-            interface_entities=llm.interface_entities or det.interface_entities,
-            units=det.units or llm.units,
-            qualifiers=det.qualifiers or llm.qualifiers,
+            # LLM fills semantic fields only when deterministic has nothing
+            actor=det.actor or llm.actor,
+            action=det.action or llm.action,
+            object=det.object or llm.object,
+            # Deterministic ALWAYS wins for comparison-critical fields
+            modality=det.modality,
+            polarity=det.polarity,
+            conditions=det.conditions,
+            temporal_constraints=det.temporal_constraints,
+            numerical_constraints=det.numerical_constraints,
+            ordering_constraints=det.ordering_constraints,
+            exceptions=det.exceptions,
+            units=det.units,
+            qualifiers=det.qualifiers,
+            safety_constraints=det.safety_constraints,
+            security_constraints=det.security_constraints,
+            # LLM fills entity/relation fields when deterministic has nothing
+            entities=det.entities if det.entities else llm.entities,
+            relations=det.relations if det.relations else llm.relations,
+            interface_entities=det.interface_entities if det.interface_entities else llm.interface_entities,
             source_language=det.source_language,
             normalized_text=det.normalized_text,
             raw_text=det.raw_text,
-            extraction_confidence=max(det.extraction_confidence, llm.extraction_confidence),
+            extraction_confidence=det.extraction_confidence,
             extraction_method="hybrid",
         )

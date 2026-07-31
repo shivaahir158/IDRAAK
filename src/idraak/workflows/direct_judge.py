@@ -12,27 +12,57 @@ from idraak.utils.logging import get_logger
 
 logger = get_logger("workflow.direct_judge")
 
-_JUDGE_PROMPT = """Compare these two technical requirements and determine if the meaning has changed.
+_JUDGE_SYSTEM = """You are an expert semantic equivalence judge. Your job is to determine whether two texts preserve the same meaning, or whether semantic drift has occurred.
 
-Original (English): {original_text}
-Translated ({target_language}): {candidate_text}
+Semantic drift means the core meaning has changed — not just surface-level rewording. Be precise:
+- Paraphrases and stylistic rewording are NOT drift
+- Synonym substitution that preserves meaning is NOT drift
+- Changes to numerical values, units, operators, thresholds ARE drift
+- Changes to modality (shall→should, must→may) ARE drift
+- Polarity inversion (shall→shall not) ARE drift
+- Adding/removing conditions or exceptions ARE drift
+- Swapping entities or roles (A depends on B → B depends on A) ARE drift
+- Omitting or adding critical information ARE drift"""
 
-Analyze whether any semantic drift occurred. Consider:
-- Numerical values, units, operators
-- Modality (shall/must/should/may)
-- Polarity (positive/negative)
-- Conditions and exceptions
-- Temporal relations
-- Scope and entities
+_JUDGE_FEW_SHOT = """Here are examples to calibrate your judgment:
 
-Respond with JSON:
-{{
-  "drift_detected": true/false,
-  "drift_types": ["list of drift types if any"],
-  "severity": "none/low/medium/high/critical",
-  "confidence": 0.0-1.0,
-  "explanation": "brief explanation"
-}}"""
+Example 1 — NO DRIFT (paraphrase):
+Original: "The system shall respond within 100ms when valid input is asserted."
+Candidate: "When valid input is asserted, the system must respond in under 100 milliseconds."
+Answer: {{"drift_detected": false, "drift_types": [], "severity": "none", "confidence": 0.95, "explanation": "Semantically equivalent: 'shall' and 'must' both express mandatory modality, '100ms' equals '100 milliseconds', sentence restructuring preserves meaning."}}
+
+Example 2 — DRIFT (numerical change):
+Original: "The system shall respond within 100ms when valid input is asserted."
+Candidate: "The system shall respond within 200ms when valid input is asserted."
+Answer: {{"drift_detected": true, "drift_types": ["numerical_drift"], "severity": "high", "confidence": 0.99, "explanation": "Response time threshold changed from 100ms to 200ms — a 2x relaxation of the timing constraint."}}
+
+Example 3 — NO DRIFT (cross-lingual equivalent):
+Original: "The device shall not exceed 5W power consumption during idle mode."
+Candidate: "Das Gerät darf im Leerlaufmodus einen Stromverbrauch von 5W nicht überschreiten."
+Answer: {{"drift_detected": false, "drift_types": [], "severity": "none", "confidence": 0.92, "explanation": "German translation preserves all technical details: 5W limit, idle mode condition, prohibition modality."}}
+
+Example 4 — DRIFT (polarity inversion):
+Original: "The module shall disable output when fault is detected."
+Candidate: "The module shall enable output when fault is detected."
+Answer: {{"drift_detected": true, "drift_types": ["polarity_drift"], "severity": "critical", "confidence": 0.99, "explanation": "Action inverted from 'disable' to 'enable' — opposite behavior on fault condition, safety-critical change."}}
+
+Example 5 — DRIFT (entity swap):
+Original: "The Tabaci River is a tributary of the River Leurda in Romania."
+Candidate: "The Leurda River is a tributary of the River Tabaci in Romania."
+Answer: {{"drift_detected": true, "drift_types": ["entity_drift"], "severity": "high", "confidence": 0.98, "explanation": "River roles swapped — Tabaci is tributary of Leurda in original, but Leurda is tributary of Tabaci in candidate. Factual meaning reversed."}}
+
+Example 6 — NO DRIFT (stylistic variation):
+Original: "He moved to New York in 2010 and stayed there until 2015."
+Candidate: "From 2010 to 2015, he lived in New York."
+Answer: {{"drift_detected": false, "drift_types": [], "severity": "none", "confidence": 0.90, "explanation": "Same factual content: person in New York during 2010-2015. 'moved to and stayed' vs 'lived' is a stylistic variation."}}"""
+
+_JUDGE_PROMPT = """Now analyze this pair:
+
+Original: {original_text}
+Candidate: {candidate_text}
+
+Respond with JSON only:
+{{"drift_detected": true/false, "drift_types": [...], "severity": "none/low/medium/high/critical", "confidence": 0.0-1.0, "explanation": "..."}}"""
 
 
 class DirectJudgeWorkflow:
@@ -62,15 +92,15 @@ class DirectJudgeWorkflow:
                 latency_seconds=time.time() - start,
             )
 
-        prompt = _JUDGE_PROMPT.format(
+        prompt = _JUDGE_FEW_SHOT + "\n\n" + _JUDGE_PROMPT.format(
             original_text=original_text,
             candidate_text=candidate_text,
-            target_language=target_language,
         )
 
         try:
             response = self._llm.complete(
                 prompt=prompt,
+                system_prompt=_JUDGE_SYSTEM,
                 temperature=0.0,
                 response_format={"type": "json_object"},
             )

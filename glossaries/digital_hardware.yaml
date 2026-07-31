@@ -1,0 +1,138 @@
+# Digital Hardware Domain Glossary
+domain: digital_hardware
+
+terms:
+  clock_cycle:
+    canonical: clock cycle
+    translations:
+      hi: "clock cycle"
+      ur: "clock cycle"
+      ar: "دورة ساعة"
+      zh: "时钟周期"
+      ja: "クロックサイクル"
+      es: "ciclo de reloj"
+      fr: "cycle d'horloge"
+      de: "Taktzyklus"
+      pt: "ciclo de clock"
+      tr: "saat döngüsü"
+      bn: "ক্লক সাইকেল"
+    synonyms: [clock period, clk cycle]
+    abbreviations: [clk]
+
+  setup_time:
+    canonical: setup time
+    translations:
+      zh: "建立时间"
+      ja: "セットアップ時間"
+      de: "Einrichtungszeit"
+    synonyms: [tsu]
+
+  hold_time:
+    canonical: hold time
+    translations:
+      zh: "保持时间"
+      ja: "ホールド時間"
+    synonyms: [th]
+
+  rising_edge:
+    canonical: rising edge
+    translations:
+      zh: "上升沿"
+      ja: "立ち上がりエッジ"
+      de: "steigende Flanke"
+      es: "flanco de subida"
+      fr: "front montant"
+    synonyms: [positive edge, posedge]
+
+  falling_edge:
+    canonical: falling edge
+    translations:
+      zh: "下降沿"
+      ja: "立ち下がりエッジ"
+      de: "fallende Flanke"
+    synonyms: [negative edge, negedge]
+
+  assertion:
+    canonical: assertion
+    synonyms: [assert, activate, set high]
+    prohibited_translations:
+      - claim  # misleading in software context
+
+  deassertion:
+    canonical: deassertion
+    synonyms: [deassert, deactivate, set low, clear]
+
+  handshake:
+    canonical: handshake
+    translations:
+      zh: "握手"
+      ja: "ハンドシェイク"
+      de: "Handshake"
+    synonyms: [handshaking protocol]
+
+  latency:
+    canonical: latency
+    translations:
+      zh: "延迟"
+      ja: "レイテンシ"
+      de: "Latenz"
+      es: "latencia"
+      fr: "latence"
+    synonyms: [delay, response time]
+    notes: "Do not confuse with throughput"
+
+  throughput:
+    canonical: throughput
+    translations:
+      zh: "吞吐量"
+      ja: "スループット"
+    synonyms: [bandwidth, data rate]
+    notes: "Do not confuse with latency"
+
+  register:
+    canonical: register
+    translations:
+      zh: "寄存器"
+      ja: "レジスタ"
+      de: "Register"
+    synonyms: [reg]
+
+  buffer:
+    canonical: buffer
+    translations:
+      zh: "缓冲器"
+      ja: "バッファ"
+    synonyms: [FIFO, queue]
+    notes: "Context-dependent: can mean FIFO or I/O buffer"
+
+  overflow:
+    canonical: overflow
+    translations:
+      zh: "溢出"
+      ja: "オーバーフロー"
+    synonyms: []
+
+  underflow:
+    canonical: underflow
+    translations:
+      zh: "下溢"
+      ja: "アンダーフロー"
+    synonyms: []
+
+  interrupt:
+    canonical: interrupt
+    translations:
+      zh: "中断"
+      ja: "割り込み"
+      de: "Interrupt"
+    synonyms: [IRQ, interrupt request]
+    notes: "Do not confuse with software exception"
+
+  finite_state_machine:
+    canonical: finite state machine
+    translations:
+      zh: "有限状态机"
+      ja: "有限状態機械"
+      de: "endlicher Automat"
+    synonyms: [FSM, state machine]
+    abbreviations: [FSM]

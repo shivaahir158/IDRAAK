@@ -1,0 +1,15 @@
+version: v1
+task: alignment
+description: Align fields and entities across two SRRs
+note: Currently handled deterministically; LLM version for complex entity alignment
+
+user_template: |
+  Align the fields between these two semantic representations.
+  Map synonyms and translated domain terms.
+  Identify unmatched attributes.
+
+  Original SRR:
+  {{ original_srr }}
+
+  Candidate SRR:
+  {{ candidate_srr }}

@@ -1,0 +1,113 @@
+# IDRAAK Default Configuration
+
+project:
+  name: idraak
+  version: "0.1.0"
+  seed: 42
+
+privacy:
+  allow_external_api: false
+
+languages:
+  enabled:
+    - en
+    - hi
+    - ur
+    - ar
+    - zh
+    - ja
+    - es
+    - fr
+    - de
+    - pt
+    - tr
+    - bn
+  source: en
+
+translation:
+  provider: mock
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_retries: 3
+  cache_enabled: true
+  prompt_version: v1
+
+extraction:
+  method: hybrid  # llm, hybrid, deterministic
+  model: gpt-4o-mini
+  temperature: 0.0
+  max_retries: 3
+  prompt_version: v1
+
+comparison:
+  unit_conversion: true
+  synonym_tolerance: true
+  reorder_tolerance: true
+
+workflows:
+  default: full_idraak
+  available:
+    - direct_judge
+    - structured_single
+    - full_idraak
+    - debate
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - macro_f1
+    - mcc
+    - auroc
+    - average_precision
+    - balanced_accuracy
+  calibration:
+    n_bins: 15
+    method: temperature_scaling
+
+dataset:
+  n_requirements: 300
+  domains:
+    - digital_hardware
+    - embedded_systems
+    - software_systems
+    - networking
+    - cybersecurity
+    - safety_critical
+    - data_processing
+    - financial_systems
+    - healthcare_devices
+    - industrial_automation
+  categories:
+    - functional_behavior
+    - timing_constraint
+    - numerical_constraint
+    - resource_constraint
+    - conditional_behavior
+    - negation
+    - exception_handling
+    - sequence_ordering
+    - safety_requirement
+    - security_requirement
+    - interface_requirement
+    - reliability_requirement
+    - performance_requirement
+    - power_requirement
+    - compliance_requirement
+
+splits:
+  train: 0.6
+  validation: 0.2
+  test: 0.2
+
+tracking:
+  backend: local  # local, wandb, mlflow
+  log_dir: artifacts/runs
+
+reporting:
+  output_dir: reports
+  formats:
+    tables: [csv, markdown, latex]
+    plots: [png, pdf]

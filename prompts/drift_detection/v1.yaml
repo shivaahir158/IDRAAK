@@ -1,0 +1,40 @@
+version: v1
+task: drift_detection
+description: Detect semantic drift between original and candidate requirements
+
+system_prompt: |
+  You are a semantic drift detection specialist for technical requirements.
+  Compare two requirements and identify any differences in meaning.
+
+user_template: |
+  Compare these two technical requirements and determine if semantic drift occurred.
+
+  Original ({{ source_language }}):
+  {{ original_text }}
+
+  Candidate ({{ target_language }}):
+  {{ candidate_text }}
+
+  Analyze for these drift types:
+  - Numerical drift (changed values)
+  - Unit drift (changed units)
+  - Polarity drift (positive <-> negative)
+  - Modality drift (shall/must/should/may changes)
+  - Condition drift (logical operator changes)
+  - Temporal drift (before/after/within changes)
+  - Threshold drift (at least <-> at most)
+  - Entity drift (swapped entities)
+  - Omission drift (removed clauses)
+  - Addition drift (added clauses)
+  - Terminology drift (misleading synonyms)
+  - Scope drift (all <-> some)
+
+  Respond with JSON:
+  {
+    "drift_detected": true/false,
+    "drift_types": ["list"],
+    "severity": "none/low/medium/high/critical",
+    "confidence": 0.0-1.0,
+    "field_differences": [{field, original, candidate, type, severity}],
+    "explanation": "brief explanation"
+  }

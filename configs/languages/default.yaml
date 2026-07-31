@@ -1,0 +1,99 @@
+# Language configuration for IDRAAK
+
+languages:
+  en:
+    name: English
+    code: en
+    family: indo_european
+    subfamily: germanic
+    script: latin
+    direction: ltr
+    enabled: true
+  hi:
+    name: Hindi
+    code: hi
+    family: indo_european
+    subfamily: indo_aryan
+    script: devanagari
+    direction: ltr
+    enabled: true
+  ur:
+    name: Urdu
+    code: ur
+    family: indo_european
+    subfamily: indo_aryan
+    script: nastaliq
+    direction: rtl
+    enabled: true
+  ar:
+    name: Arabic
+    code: ar
+    family: afro_asiatic
+    subfamily: semitic
+    script: arabic
+    direction: rtl
+    enabled: true
+  zh:
+    name: Simplified Chinese
+    code: zh
+    family: sino_tibetan
+    subfamily: sinitic
+    script: han_simplified
+    direction: ltr
+    enabled: true
+  ja:
+    name: Japanese
+    code: ja
+    family: japonic
+    subfamily: japanese
+    script: mixed
+    direction: ltr
+    enabled: true
+  es:
+    name: Spanish
+    code: es
+    family: indo_european
+    subfamily: romance
+    script: latin
+    direction: ltr
+    enabled: true
+  fr:
+    name: French
+    code: fr
+    family: indo_european
+    subfamily: romance
+    script: latin
+    direction: ltr
+    enabled: true
+  de:
+    name: German
+    code: de
+    family: indo_european
+    subfamily: germanic
+    script: latin
+    direction: ltr
+    enabled: true
+  pt:
+    name: Portuguese
+    code: pt
+    family: indo_european
+    subfamily: romance
+    script: latin
+    direction: ltr
+    enabled: true
+  tr:
+    name: Turkish
+    code: tr
+    family: turkic
+    subfamily: oghuz
+    script: latin
+    direction: ltr
+    enabled: true
+  bn:
+    name: Bengali
+    code: bn
+    family: indo_european
+    subfamily: indo_aryan
+    script: bengali
+    direction: ltr
+    enabled: true

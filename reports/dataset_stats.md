@@ -1,0 +1,17 @@
+|                              |   Count |
+|:-----------------------------|--------:|
+| Total requirements           |      50 |
+| Domains                      |      10 |
+| domain_digital_hardware      |       5 |
+| domain_embedded_systems      |       5 |
+| domain_software_systems      |       5 |
+| domain_networking            |       5 |
+| domain_cybersecurity         |       5 |
+| domain_safety_critical       |       5 |
+| domain_data_processing       |       5 |
+| domain_financial_systems     |       5 |
+| domain_healthcare_devices    |       5 |
+| domain_industrial_automation |       5 |
+| Categories                   |      15 |
+| difficulty_easy              |      39 |
+| difficulty_medium            |      11 |

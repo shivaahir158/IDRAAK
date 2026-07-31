@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  idraak:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./artifacts:/app/artifacts
+    env_file:
+      - .env
+    command: python3 -m idraak.cli run

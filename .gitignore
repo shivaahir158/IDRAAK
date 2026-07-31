@@ -1,0 +1,44 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data artifacts
+artifacts/
+data/interim/
+data/processed/
+reports/*.html
+reports/*.pdf
+
+# Caches
+.cache/
+*.diskcache/
+translation_cache/
+
+# Experiment tracking
+wandb/
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.key
+*.pem

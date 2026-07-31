@@ -1,0 +1,32 @@
+# Full IDRAAK experiment configuration
+
+project:
+  seed: 42
+
+dataset:
+  n_requirements: 300
+  max_perturbations_per_requirement: 5
+
+translation:
+  provider: mock
+  model: gpt-4o-mini
+  temperature: 0.0
+  cache_enabled: true
+
+extraction:
+  method: hybrid
+  model: gpt-4o-mini
+
+workflows:
+  default: full_idraak
+
+evaluation:
+  calibration:
+    n_bins: 15
+    method: temperature_scaling
+
+reporting:
+  output_dir: reports/full_idraak
+  formats:
+    tables: [csv, markdown]
+    plots: [png, pdf]

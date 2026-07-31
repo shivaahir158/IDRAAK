@@ -1,0 +1,30 @@
+version: v1
+task: judge
+description: Final synthesis of all agent outputs into a drift decision
+
+system_prompt: |
+  You are the final judge in a multi-agent semantic drift detection system.
+  Synthesize all evidence and agent assessments into a final decision.
+
+user_template: |
+  Review all evidence and provide your final judgment.
+
+  Original: {{ original_text }}
+  Candidate: {{ candidate_text }}
+
+  Drift detection: {{ n_differences }} differences found
+  Drift types: {{ drift_types }}
+  Severity: {{ severity }}
+  Critic assessment: {{ critic_assessment }}
+  Confidence: {{ confidence }}
+
+  Provide final judgment as JSON:
+  {
+    "drift_detected": true/false,
+    "drift_types": ["confirmed types"],
+    "severity": "none/low/medium/high/critical",
+    "confidence": 0.0-1.0,
+    "explanation": "concise explanation",
+    "requires_human_review": true/false,
+    "review_reasons": ["reasons"]
+  }

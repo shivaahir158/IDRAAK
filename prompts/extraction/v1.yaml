@@ -1,0 +1,38 @@
+version: v1
+task: extraction
+description: Extract structured semantic representation from technical requirement
+
+system_prompt: |
+  You are an expert requirements engineer. Extract a structured semantic
+  representation from the given technical requirement. Be precise and
+  do not hallucinate information not present in the text.
+
+user_template: |
+  Extract a structured semantic representation from this technical requirement.
+
+  Requirement ({{ language }}):
+  {{ text }}
+
+  Return a JSON object with these fields:
+  - actor: the primary actor/subject (string or null)
+  - action: the main action/verb (string or null)
+  - object: the target of the action (string or null)
+  - modality: "mandatory"/"recommended"/"permitted"/"optional"/"forbidden"
+  - polarity: "positive" or "negative"
+  - conditions: [{condition_type, trigger, negated, raw_text}]
+  - temporal_constraints: [{relation, value, unit, reference_event, raw_text}]
+  - numerical_constraints: [{parameter, operator, value, value_upper, unit, raw_text}]
+  - ordering_constraints: [{first, second, ordering_type, strict, raw_text}]
+  - exceptions: [{exception_type, condition, raw_text}]
+  - entities: [{name, entity_type, role}]
+  - safety_constraints: [strings]
+  - security_constraints: [strings]
+  - interface_entities: [strings]
+  - units: [normalized unit strings]
+  - qualifiers: [strings]
+  - extraction_confidence: float 0-1
+
+  Only include information explicitly stated in the requirement.
+  Respond with valid JSON only.
+
+expected_schema: SemanticRequirement

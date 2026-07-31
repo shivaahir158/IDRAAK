@@ -1,0 +1,5 @@
+{"requirement_id": "REQ-0001-PERT-PARA", "base_id": "REQ-0001", "drift_type": null, "gold_label": 0, "pred_label": 0, "confidence": 1.0, "n_diffs": 0, "workflow": "direct_judge", "provider": "openai", "model": "gpt-4o-mini"}
+{"requirement_id": "REQ-0001-PERT-POL", "base_id": "REQ-0001", "drift_type": "polarity_drift", "gold_label": 1, "pred_label": 1, "confidence": 1.0, "n_diffs": 0, "workflow": "direct_judge", "provider": "openai", "model": "gpt-4o-mini"}
+{"requirement_id": "REQ-0001-PERT-UNIT", "base_id": "REQ-0001", "drift_type": "unit_drift", "gold_label": 1, "pred_label": 0, "confidence": 1.0, "n_diffs": 0, "workflow": "direct_judge", "provider": "openai", "model": "gpt-4o-mini"}
+{"requirement_id": "REQ-0002-PERT-PARA", "base_id": "REQ-0002", "drift_type": null, "gold_label": 0, "pred_label": 1, "confidence": 0.9, "n_diffs": 0, "workflow": "direct_judge", "provider": "openai", "model": "gpt-4o-mini"}
+{"requirement_id": "REQ-0002-PERT-TEMP", "base_id": "REQ-0002", "drift_type": "temporal_drift", "gold_label": 1, "pred_label": 1, "confidence": 0.95, "n_diffs": 0, "workflow": "direct_judge", "provider": "openai", "model": "gpt-4o-mini"}

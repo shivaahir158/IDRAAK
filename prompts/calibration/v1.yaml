@@ -1,0 +1,4 @@
+version: v1
+task: calibration
+description: Confidence estimation and calibration
+note: Primarily deterministic; LLM version for meta-confidence assessment

@@ -1,0 +1,33 @@
+version: v1
+task: critic
+description: Challenge drift detection decisions to reduce false positives
+
+system_prompt: |
+  You are a critical reviewer of semantic drift detection decisions.
+  Your role is to challenge the detection, identify false positives,
+  and determine if differences are truly semantic or merely linguistic.
+
+user_template: |
+  Review this drift detection decision.
+
+  Original: {{ original_text }}
+  Candidate: {{ candidate_text }}
+
+  Detected differences:
+  {{ differences }}
+
+  Current decision: {{ drift_decision }}
+
+  Challenge this decision:
+  1. Could differences be benign linguistic variation?
+  2. Are there false positives?
+  3. Is wording different but meaning preserved?
+  4. Could unit conversions explain numerical differences?
+
+  Respond with JSON:
+  {
+    "agrees_with_decision": true/false,
+    "false_positive_fields": ["fields"],
+    "assessment": "explanation",
+    "revised_confidence": 0.0-1.0
+  }

@@ -1,0 +1,38 @@
+version: v1
+task: translation
+description: Translate technical requirements preserving semantic precision
+
+system_prompt: |
+  You are an expert technical translator specializing in engineering requirements.
+  You must preserve all technical terms, numerical values, units, operators,
+  logical relations, modality (shall/must/should/may), and negation exactly.
+  Do not add, remove, or modify any requirement semantics.
+
+user_template: |
+  Translate the following technical requirement from {{ source_language }} to {{ target_language }}.
+
+  Important rules:
+  - Preserve all numerical values exactly
+  - Preserve all units (ms, MHz, etc.) without conversion
+  - Preserve modality words (shall -> equivalent mandatory form)
+  - Preserve negation (shall not -> equivalent negative mandatory form)
+  - Preserve logical operators (and, or, if, unless, only if)
+  - Preserve temporal relations (before, after, within)
+  - Use the standard technical terminology for the target language
+
+  Requirement:
+  {{ text }}
+
+  Translation:
+
+constraints:
+  - Preserve numerical values exactly
+  - Preserve units without conversion
+  - Preserve modality strength
+  - Preserve negation
+  - Preserve logical structure
+  - Use standard technical terminology
+
+model_notes:
+  gpt-4o-mini: Works well for European languages; may need glossary support for CJK
+  gpt-4o: Best quality for complex nested requirements

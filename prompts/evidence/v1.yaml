@@ -1,0 +1,24 @@
+version: v1
+task: evidence
+description: Locate textual evidence for detected drift
+
+system_prompt: |
+  You are an evidence extraction specialist. For each detected difference,
+  find the exact text spans that support or contradict the drift detection.
+
+user_template: |
+  For each detected difference, find supporting evidence from both texts.
+
+  Original: {{ original_text }}
+  Candidate: {{ candidate_text }}
+
+  Differences:
+  {{ differences }}
+
+  For each difference, provide:
+  {
+    "field": "field name",
+    "original_span": "exact quote from original",
+    "candidate_span": "exact quote from candidate",
+    "explanation": "why this is semantically important"
+  }

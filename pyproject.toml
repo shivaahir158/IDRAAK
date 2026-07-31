@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "idraak"
+version = "0.1.0"
+description = "An Interpretable Multi-Agent Framework for Detecting Semantic Drift and Faithfulness in Multilingual Technical Requirements"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "IDRAAK Research Team"},
+]
+keywords = ["semantic-drift", "multilingual", "requirements-engineering", "multi-agent", "NLP"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "pydantic>=2.0,<3.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "scipy>=1.11",
+    "matplotlib>=3.7",
+    "sentence-transformers>=2.2",
+    "transformers>=4.30",
+    "torch>=2.0",
+    "typer>=0.9",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+    "jinja2>=3.1",
+    "pint>=0.22",
+    "tenacity>=8.2",
+    "httpx>=0.24",
+    "python-dotenv>=1.0",
+    "diskcache>=5.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+    "mypy>=1.5",
+    "pre-commit>=3.4",
+]
+ui = [
+    "streamlit>=1.28",
+]
+tracking = [
+    "wandb>=0.15",
+    "mlflow>=2.7",
+]
+all = ["idraak[dev,ui,tracking]"]
+
+[project.scripts]
+idraak = "idraak.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks integration tests",
+    "api: marks tests requiring API access",
+]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+warn_return_any = true
+warn_unused_configs = true

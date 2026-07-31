@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use IDRAAK in your research, please cite it as follows."
+title: "IDRAAK: An Interpretable Multi-Agent Framework for Detecting Semantic Drift and Faithfulness in Multilingual Technical Requirements"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/idraak-research/idraak"
+keywords:
+  - semantic drift
+  - multilingual
+  - requirements engineering
+  - multi-agent systems
+  - NLP
+  - faithfulness

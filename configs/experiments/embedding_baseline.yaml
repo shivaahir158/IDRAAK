@@ -1,0 +1,11 @@
+# Experiment 1: Embedding baseline
+
+workflows:
+  default: embedding_baseline
+
+evaluation:
+  model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+  threshold: 0.85
+
+reporting:
+  output_dir: reports/embedding_baseline

@@ -62,11 +62,11 @@ Full experiment matrix on 890 perturbations across 300 technical requirements us
 | Full IDRAAK | Deterministic | 0.898 | 0.835 | 0.474 | 0.2s |
 | Full IDRAAK | OpenAI (gpt-4o-mini) | 0.895 | 0.821 | 0.297 | ~137min |
 
-**Optimized prompt results** (50-sample validation with few-shot calibration):
+**Optimized prompt results** (148-sample validation with few-shot calibration):
 
 | Workflow | Provider | F1 | Accuracy | MCC |
 |----------|----------|-----|----------|------|
-| **Direct Judge (few-shot)** | **OpenAI (gpt-4o-mini)** | **0.962** | **0.940** | **0.834** |
+| **Direct Judge (few-shot)** | **OpenAI (gpt-4o-mini)** | **0.971** | **0.953** | **0.855** |
 | Structured Single (fixed merge) | OpenAI (gpt-4o-mini) | 0.907 | 0.860 | 0.628 |
 
 ### PAWSX Benchmark (Cross-lingual Paraphrase Detection)
@@ -78,7 +78,7 @@ Full experiment matrix on 890 perturbations across 300 technical requirements us
 | Structured Single | Deterministic | 0.012 | 0.388 | -0.098 |
 | Direct Judge | OpenAI (gpt-4o-mini) | 0.814 | 0.739 | 0.451 |
 | **Ensemble** | **OpenAI (gpt-4o-mini)** | **0.817** | **0.738** | **0.459** |
-| Structured Single | OpenAI (gpt-4o-mini) | 0.724 | 0.579 | -0.034 |
+| Structured Single | OpenAI (gpt-4o-mini) | 0.723 | 0.583 | -0.003 |
 | Full IDRAAK | Deterministic | 0.012 | 0.388 | -0.098 |
 
 ### XNLI Benchmark (Cross-lingual Natural Language Inference)
@@ -94,8 +94,8 @@ Full experiment matrix on 890 perturbations across 300 technical requirements us
 
 ### Key Findings
 
-- **Direct Judge is the best workflow across all benchmarks** — a single GPT-4o-mini call with a well-crafted few-shot prompt consistently outperforms both deterministic and multi-agent approaches (MCC=0.834 on synthetic data with calibrated prompt).
-- **Few-shot calibration dramatically improves performance** — adding 6 carefully selected examples to the direct judge prompt improved MCC from 0.731→0.834 (+14%) on the synthetic benchmark. The examples cover paraphrases, numerical drift, polarity inversion, and entity swaps.
+- **Direct Judge is the best workflow across all benchmarks** — a single GPT-4o-mini call with a well-crafted few-shot prompt consistently outperforms both deterministic and multi-agent approaches (MCC=0.855 on synthetic data with calibrated prompt).
+- **Few-shot calibration dramatically improves performance** — adding 6 carefully selected examples to the direct judge prompt improved MCC from 0.731→0.855 (+17%) on the synthetic benchmark. The examples cover paraphrases, numerical drift, polarity inversion, and entity swaps.
 - **Ensemble approach excels on adversarial benchmarks** — the ensemble workflow (deterministic SRR evidence + LLM judge) achieves the best MCC=0.459 on PAWSX, slightly outperforming direct judge (MCC=0.451), by providing structured evidence to guide the LLM's decision.
 - **Deterministic SRR comparison excels on technical requirements** (F1=0.898) but fails on general text (PAWSX F1=0.012) — it relies on domain-specific patterns (modality, numerical constraints, units) that don't exist in general sentences.
 - **LLM-based detection generalizes to real benchmarks** — direct_judge achieves F1=0.814 on PAWSX adversarial paraphrases, a challenging benchmark where even dedicated models struggle.

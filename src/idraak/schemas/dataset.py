@@ -27,6 +27,7 @@ class PerturbationRecord(BaseModel):
 
     requirement_id: str
     base_requirement_id: str
+    original_text: str = ""
     perturbed_text: str
     drift_label: int  # 0 = no drift, 1 = drift
     drift_type: Optional[str] = None
@@ -36,3 +37,6 @@ class PerturbationRecord(BaseModel):
     modified_value: Any = None
     perturbation_method: str = ""
     description: str = ""
+    source_language: str = "en"
+    target_language: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)

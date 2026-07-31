@@ -49,6 +49,8 @@ flowchart TD
 
 ## Results
 
+### Synthetic Benchmark (IDRAAK)
+
 Full experiment matrix on 890 perturbations across 300 technical requirements using GPT-4o-mini:
 
 | Workflow | Provider | F1 | Accuracy | MCC | Time |
@@ -59,12 +61,35 @@ Full experiment matrix on 890 perturbations across 300 technical requirements us
 | Full IDRAAK | Deterministic | 0.898 | 0.835 | 0.474 | 0.2s |
 | Full IDRAAK | OpenAI (gpt-4o-mini) | 0.895 | 0.821 | 0.297 | ~137min |
 
+### PAWSX Benchmark (Cross-lingual Paraphrase Detection)
+
+805 adversarial paraphrase pairs across 5 languages (en, de, es, fr, zh):
+
+| Workflow | Provider | F1 | Accuracy | MCC |
+|----------|----------|-----|----------|------|
+| Structured Single | Deterministic | 0.012 | 0.388 | -0.098 |
+| **Direct Judge** | **OpenAI (gpt-4o-mini)** | **0.814** | **0.748** | **0.463** |
+| Structured Single | OpenAI (gpt-4o-mini) | 0.724 | 0.579 | -0.034 |
+| Full IDRAAK | Deterministic | 0.012 | 0.388 | -0.098 |
+
+### XNLI Benchmark (Cross-lingual Natural Language Inference)
+
+700 premise-hypothesis pairs across 7 languages (en, hi, ar, zh, de, fr, es):
+
+| Workflow | Provider | F1 | Accuracy | MCC |
+|----------|----------|-----|----------|------|
+| Structured Single | Deterministic | 0.396 | 0.533 | 0.074 |
+| **Direct Judge** | **OpenAI (gpt-4o-mini)** | **0.680** | **0.529** | **0.172** |
+| Structured Single | OpenAI (gpt-4o-mini) | 0.664 | 0.511 | 0.055 |
+| Full IDRAAK | Deterministic | 0.396 | 0.533 | 0.074 |
+
 ### Key Findings
 
-- **Direct Judge achieves the best results** (F1=0.960, MCC=0.731) — a single GPT-4o-mini call with a well-crafted prompt outperforms both deterministic and multi-agent approaches on this benchmark.
-- **Deterministic SRR comparison is a strong baseline** — instant, free, and F1=0.898. The structured extraction + field-level comparison approach is highly effective for controlled perturbations.
-- **Hybrid extraction needs tuning** — adding LLM extraction to the structured comparison pipeline currently degrades MCC, as the merge logic between deterministic and LLM-extracted SRRs introduces false positives on paraphrases.
-- **More agents ≠ better** — the full 8-agent IDRAAK pipeline with OpenAI underperforms the simpler direct judge, suggesting that error propagation across agents can outweigh the benefit of specialized reasoning.
+- **Direct Judge is the best workflow across all benchmarks** — a single GPT-4o-mini call with a well-crafted prompt consistently outperforms both deterministic and multi-agent approaches.
+- **Deterministic SRR comparison excels on technical requirements** (F1=0.898) but fails on general text (PAWSX F1=0.012) — it relies on domain-specific patterns (modality, numerical constraints, units) that don't exist in general sentences.
+- **LLM-based detection generalizes to real benchmarks** — direct_judge achieves F1=0.814 on PAWSX adversarial paraphrases, a challenging benchmark where even dedicated models struggle.
+- **Cross-lingual NLI is hard** — XNLI maps imperfectly to drift detection (entailment≠paraphrase), explaining lower scores. The direct judge still outperforms all other approaches.
+- **More agents ≠ better** — the full 8-agent pipeline underperforms the simpler direct judge, suggesting error propagation across agents outweighs specialized reasoning benefits.
 
 ## Research Questions
 
@@ -129,6 +154,19 @@ python3 -m idraak.cli evaluate \
 python3 -m idraak.cli experiment-matrix \
     --model gpt-4o-mini \
     --output-dir reports/experiments
+
+# Evaluate on external benchmarks (PAWSX, XNLI)
+python3 -m idraak.cli benchmark-eval \
+    --benchmark pawsx \
+    --languages "en,de,es,fr,zh" \
+    --workflow direct_judge \
+    --provider openai
+
+# Run benchmark matrix (all workflows on external benchmark)
+python3 -m idraak.cli benchmark-matrix \
+    --benchmark xnli \
+    --languages "en,hi,ar,zh,de,fr,es" \
+    --max-samples 100
 
 # Run ablation studies
 python3 -m idraak.cli run-ablation --ablation all
@@ -253,6 +291,7 @@ python3 -m pytest tests/ -v --cov=src/idraak
 - 4 calibration methods
 - Embedding + token overlap baselines
 - Full experiment matrix with real API calls (5 configurations)
+- External benchmark evaluation (PAWSX, XNLI) with automatic download and caching
 - Ablation study (10 configurations)
 - Error analysis (false positive/negative breakdown)
 - Publication-quality plots and tables

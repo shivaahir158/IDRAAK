@@ -591,5 +591,259 @@ def generate_report(
     console.print(f"[green]Reports available in {output_dir}/[/green]")
 
 
+@app.command()
+def benchmark_eval(
+    benchmark: str = typer.Option("pawsx", help="Benchmark: pawsx, xnli"),
+    languages: str = typer.Option("en", help="Comma-separated language codes"),
+    workflow: str = typer.Option("direct_judge", help="Workflow: direct_judge, structured_single, full_idraak"),
+    provider: str = typer.Option("openai", help="LLM provider: none, mock, openai"),
+    model: str = typer.Option("gpt-4o-mini", help="Model name"),
+    max_samples: int = typer.Option(200, help="Max samples per language"),
+    output_dir: str = typer.Option("reports/benchmarks", help="Output directory"),
+    seed: int = typer.Option(42, help="Random seed"),
+) -> None:
+    """Evaluate on external benchmarks (PAWSX, XNLI)."""
+    import numpy as np
+
+    from idraak.datasets.benchmarks import load_pawsx, load_xnli
+    from idraak.evaluation.metrics import ClassificationMetrics
+    from idraak.reporting.plots import PlotGenerator
+    from idraak.reporting.tables import TableGenerator
+    from idraak.utils.seed import set_global_seed
+
+    set_global_seed(seed)
+
+    lang_list = [l.strip() for l in languages.split(",")]
+
+    # Load benchmark data
+    console.print(f"[bold]Loading {benchmark} ({', '.join(lang_list)})...[/bold]")
+    if benchmark == "pawsx":
+        perts = load_pawsx(languages=lang_list, max_per_language=max_samples)
+    elif benchmark == "xnli":
+        perts = load_xnli(languages=lang_list, max_per_language=max_samples)
+    else:
+        console.print(f"[red]Unknown benchmark: {benchmark}. Use 'pawsx' or 'xnli'.[/red]")
+        raise typer.Exit(1)
+
+    drift_count = sum(1 for p in perts if p.drift_label == 1)
+    console.print(f"Loaded {len(perts)} pairs (drift={drift_count}, no-drift={len(perts)-drift_count})")
+
+    # Build provider and workflow
+    llm_provider, translation_provider = _build_providers(provider)
+    if provider == "openai":
+        from idraak.providers.openai_provider import OpenAILLMProvider
+        llm_provider = OpenAILLMProvider(model=model)
+
+    wf = _build_workflow(workflow, llm_provider, translation_provider)
+    wf_label = f"{benchmark}/{workflow}/{provider}"
+
+    # Run evaluation
+    y_true, y_pred, y_prob = [], [], []
+    results = []
+    errors = 0
+    start_time = time.time()
+
+    for i, pert in enumerate(perts):
+        try:
+            result = wf.run(
+                original_text=pert.original_text,
+                candidate_text=pert.perturbed_text,
+                requirement_id=pert.requirement_id,
+            )
+        except Exception as e:
+            errors += 1
+            if errors <= 5:
+                console.print(f"  [red]Error: {e}[/red]")
+            continue
+
+        y_true.append(pert.drift_label)
+        y_pred.append(1 if result.drift_detected else 0)
+        y_prob.append(result.confidence)
+        results.append({
+            "requirement_id": pert.requirement_id,
+            "gold_label": pert.drift_label,
+            "pred_label": 1 if result.drift_detected else 0,
+            "confidence": result.confidence,
+            "language": pert.target_language or pert.source_language,
+            "benchmark": benchmark,
+        })
+
+        if (i + 1) % 50 == 0:
+            console.print(f"  Processed {i+1}/{len(perts)}...")
+
+    total_time = time.time() - start_time
+    if errors:
+        console.print(f"[yellow]{errors} errors[/yellow]")
+
+    # Metrics
+    metrics = ClassificationMetrics.compute(y_true, y_pred, y_prob)
+    console.print(f"\n[bold]Results ({wf_label}):[/bold]")
+
+    table = Table(title=f"{benchmark.upper()} Benchmark Results")
+    table.add_column("Metric")
+    table.add_column("Value")
+    for k, v in metrics.to_dict().items():
+        if isinstance(v, float):
+            table.add_row(k, f"{v:.4f}")
+        else:
+            table.add_row(k, str(v))
+    console.print(table)
+    console.print(f"Time: {total_time:.1f}s | Errors: {errors}")
+
+    # Per-language metrics
+    if len(lang_list) > 1:
+        lang_labels = [r["language"] for r in results]
+        per_lang = ClassificationMetrics.per_group_metrics(y_true, y_pred, lang_labels, y_prob)
+        console.print("\n[bold]Per-language results:[/bold]")
+        lang_table = Table(title="Per-Language Metrics")
+        lang_table.add_column("Language")
+        lang_table.add_column("F1", justify="right")
+        lang_table.add_column("Accuracy", justify="right")
+        lang_table.add_column("MCC", justify="right")
+        lang_table.add_column("N", justify="right")
+        for lang, m in sorted(per_lang.items()):
+            lang_table.add_row(lang, f"{m.f1:.4f}", f"{m.accuracy:.4f}", f"{m.mcc:.4f}", str(m.n_samples))
+        console.print(lang_table)
+
+    # Save
+    out_dir = Path(output_dir) / f"{benchmark}_{workflow}_{provider}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results_path = out_dir / "results.jsonl"
+    with open(results_path, "w") as f:
+        for r in results:
+            f.write(json.dumps(r, default=str) + "\n")
+
+    metrics_path = out_dir / "metrics.json"
+    with open(metrics_path, "w") as f:
+        json.dump(metrics.to_dict(), f, indent=2, default=str)
+
+    tg = TableGenerator(str(out_dir))
+    tg.metrics_table({wf_label: metrics.to_dict()})
+
+    console.print(f"\n[green]Results saved to {out_dir}/[/green]")
+
+
+@app.command()
+def benchmark_matrix(
+    benchmark: str = typer.Option("pawsx", help="Benchmark: pawsx, xnli"),
+    languages: str = typer.Option("en", help="Comma-separated language codes"),
+    model: str = typer.Option("gpt-4o-mini", help="OpenAI model"),
+    max_samples: int = typer.Option(200, help="Max samples per language"),
+    output_dir: str = typer.Option("reports/benchmarks", help="Output directory"),
+    seed: int = typer.Option(42, help="Random seed"),
+) -> None:
+    """Run experiment matrix on external benchmarks."""
+    import numpy as np
+
+    from idraak.datasets.benchmarks import load_pawsx, load_xnli
+    from idraak.evaluation.metrics import ClassificationMetrics
+    from idraak.reporting.plots import PlotGenerator
+    from idraak.reporting.tables import TableGenerator
+    from idraak.utils.seed import set_global_seed
+
+    set_global_seed(seed)
+
+    lang_list = [l.strip() for l in languages.split(",")]
+
+    console.print(f"[bold]Loading {benchmark} ({', '.join(lang_list)})...[/bold]")
+    if benchmark == "pawsx":
+        perts = load_pawsx(languages=lang_list, max_per_language=max_samples)
+    elif benchmark == "xnli":
+        perts = load_xnli(languages=lang_list, max_per_language=max_samples)
+    else:
+        console.print(f"[red]Unknown benchmark: {benchmark}[/red]")
+        raise typer.Exit(1)
+
+    drift_count = sum(1 for p in perts if p.drift_label == 1)
+    console.print(f"Loaded {len(perts)} pairs (drift={drift_count}, no-drift={len(perts)-drift_count})")
+
+    experiments = [
+        ("structured_single", "none"),
+        ("direct_judge", "openai"),
+        ("structured_single", "openai"),
+        ("full_idraak", "none"),
+    ]
+
+    all_metrics: dict[str, dict] = {}
+
+    for workflow, provider in experiments:
+        label = f"{workflow}/{provider}" + (f"/{model}" if provider == "openai" else "")
+        console.print(f"\n[bold blue]{'='*60}[/bold blue]")
+        console.print(f"[bold blue]{label}[/bold blue]")
+
+        llm_provider, translation_provider = _build_providers(provider)
+        if provider == "openai":
+            from idraak.providers.openai_provider import OpenAILLMProvider
+            llm_provider = OpenAILLMProvider(model=model)
+
+        wf = _build_workflow(workflow, llm_provider, translation_provider)
+
+        y_true, y_pred, y_prob = [], [], []
+        errors = 0
+        start_time = time.time()
+
+        for i, pert in enumerate(perts):
+            try:
+                result = wf.run(
+                    original_text=pert.original_text,
+                    candidate_text=pert.perturbed_text,
+                    requirement_id=pert.requirement_id,
+                )
+                y_true.append(pert.drift_label)
+                y_pred.append(1 if result.drift_detected else 0)
+                y_prob.append(result.confidence)
+            except Exception as e:
+                errors += 1
+                if errors <= 3:
+                    console.print(f"  [red]Error: {e}[/red]")
+
+            if (i + 1) % 100 == 0:
+                console.print(f"  Processed {i+1}/{len(perts)}...")
+
+        elapsed = time.time() - start_time
+        metrics = ClassificationMetrics.compute(y_true, y_pred, y_prob)
+        all_metrics[label] = metrics.to_dict()
+        all_metrics[label]["elapsed_seconds"] = round(elapsed, 1)
+        all_metrics[label]["errors"] = errors
+
+        console.print(
+            f"  [green]F1={metrics.f1:.4f}  Acc={metrics.accuracy:.4f}  "
+            f"MCC={metrics.mcc:.4f}  ({elapsed:.1f}s, {errors} errors)[/green]"
+        )
+
+    # Save
+    out_dir = Path(output_dir) / f"{benchmark}_matrix"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    tg = TableGenerator(str(out_dir))
+    tg.metrics_table(all_metrics, name=f"{benchmark}_matrix")
+
+    pg = PlotGenerator(str(out_dir))
+    pg.method_comparison(all_metrics, name=f"{benchmark}_matrix")
+
+    results_path = out_dir / f"{benchmark}_matrix.json"
+    with open(results_path, "w") as f:
+        json.dump(all_metrics, f, indent=2, default=str)
+
+    console.print(f"\n[bold green]{benchmark.upper()} matrix complete! Results in {out_dir}/[/bold green]")
+
+    table = Table(title=f"{benchmark.upper()} Benchmark Matrix")
+    table.add_column("Experiment")
+    table.add_column("F1", justify="right")
+    table.add_column("Accuracy", justify="right")
+    table.add_column("MCC", justify="right")
+    table.add_column("Time", justify="right")
+    for label, m in all_metrics.items():
+        table.add_row(
+            label,
+            f"{m.get('f1', 0):.4f}",
+            f"{m.get('accuracy', 0):.4f}",
+            f"{m.get('mcc', 0):.4f}",
+            f"{m.get('elapsed_seconds', 0):.1f}s",
+        )
+    console.print(table)
+
+
 if __name__ == "__main__":
     app()

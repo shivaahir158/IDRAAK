@@ -875,7 +875,7 @@ def benchmark_analysis(
     import numpy as np
     from sklearn.metrics import f1_score, matthews_corrcoef
 
-    from idraak.calibration.calibrators import PlattCalibrator, IsotonicCalibrator
+    from idraak.calibration.calibrators import PlattScaling, IsotonicCalibrator
     from idraak.evaluation.metrics import ClassificationMetrics
     from idraak.evaluation.statistics import BootstrapTest, McNemarTest
     from idraak.reporting.tables import TableGenerator
@@ -967,7 +967,7 @@ def benchmark_analysis(
 
         # Apply Platt scaling (using same data for demo — ideally use held-out set)
         try:
-            platt = PlattCalibrator()
+            platt = PlattScaling()
             platt.fit(y_prob, y_true)
             cal_prob = platt.calibrate(y_prob)
             post_metrics = ClassificationMetrics.compute(

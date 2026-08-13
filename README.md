@@ -15,6 +15,7 @@ IDRAAK evaluates whether the intended meaning of a technical requirement remains
   journal={arXiv preprint arXiv:2608.08801},
   year={2026}
 }
+```
 
 ## Architecture
 

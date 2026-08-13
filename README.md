@@ -4,6 +4,18 @@
 
 IDRAAK evaluates whether the intended meaning of a technical requirement remains consistent when translated into multiple languages, paraphrased, or processed by language models. It detects semantic drift, identifies which technical attributes changed, estimates confidence, provides interpretable evidence, and compares single-model and multi-agent verification approaches.
 
+> **If you find this work useful and would like to use or build upon it, please consider citing our paper.**
+
+### Citation
+
+```bibtex
+@article{ahir2026idraak,
+  title={IDRAAK: From Multi-Agent NLP to Few-Shot Prompting for Semantic Drift Detection in Technical Requirements},
+  author={Ahir, Shiva},
+  journal={arXiv preprint arXiv:2608.08801},
+  year={2026}
+}
+
 ## Architecture
 
 ```mermaid
